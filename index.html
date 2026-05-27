@@ -71,7 +71,7 @@ body{
 
 /* ---------- COUNTS STRIP ---------- */
 .counts{
-  display:grid;grid-template-columns:repeat(5,1fr);gap:1px;
+  display:grid;grid-template-columns:repeat(6,1fr);gap:1px;
   background:var(--clay);border-radius:14px;overflow:hidden;
   margin-bottom:28px;box-shadow:var(--shadow);
 }
@@ -301,6 +301,56 @@ section.active{display:block}
 .rw-mini.level-5{
   background:var(--clay-soft);
   color:var(--ink-soft);
+}
+
+/* ---------- INDICATOR CHIPS ---------- */
+.indicators-row{
+  display:flex;flex-wrap:wrap;gap:6px;
+  margin-bottom:14px;align-items:center;
+}
+.chip{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:4px 11px;border-radius:14px;
+  font-size:11px;font-weight:600;letter-spacing:.08em;
+  text-transform:uppercase;line-height:1.4;
+}
+.chip.loyalty-seed{
+  background:linear-gradient(135deg,#3F5D3A,#2E4538);
+  color:#E8DFCB;
+  letter-spacing:.14em;font-weight:700;
+}
+.chip.departing{
+  background:rgba(184,102,45,.12);
+  color:var(--terracotta);
+  border:1px solid rgba(184,102,45,.3);
+}
+.chip.arriving{
+  background:rgba(110,127,102,.12);
+  color:var(--moss);
+  border:1px solid rgba(110,127,102,.3);
+}
+.chip.group{
+  background:var(--cream);
+  color:var(--ink-soft);
+  border:1px solid var(--clay);
+  font-weight:500;
+  text-transform:none;
+  letter-spacing:.02em;
+  font-size:12px;
+  max-width:100%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.rw-mini-loyalty{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:22px;height:22px;border-radius:50%;
+  font-size:9px;font-weight:700;letter-spacing:.04em;
+  margin-left:4px;line-height:1;
+  background:linear-gradient(135deg,#3F5D3A,#2E4538);
+  color:#E8DFCB;
+  vertical-align:middle;
 }
 .meal{
   background:var(--cream);border:1px solid var(--clay-soft);
@@ -725,7 +775,7 @@ section.active{display:block}
   .app{padding:18px 14px 60px}
   .brand-mark{font-size:26px}
   .meta-date{font-size:20px}
-  .counts{grid-template-columns:repeat(5,1fr)}
+  .counts{grid-template-columns:repeat(3,1fr)}
   .count{padding:12px 6px}
   .count-num{font-size:22px}
   .count-lbl{font-size:9px;letter-spacing:.1em}
@@ -766,7 +816,7 @@ section.active{display:block}
   </div>
   <div class="meta-row">
     <div class="meta-date" id="metaDate">No roster loaded</div>
-    <div class="meta-source">1 Hotel Melbourne · <code>BJINHL</code> + <code>BJMPGR</code></div>
+    <div class="meta-source">1 Hotel Melbourne · <code>BJINHD</code> + <code>BJMPGR</code></div>
   </div>
 </header>
 
@@ -776,6 +826,7 @@ section.active{display:block}
   <div class="count"><div class="count-num success" id="cntServed">—</div><div class="count-lbl">Served</div></div>
   <div class="count"><div class="count-num muted" id="cntPending">—</div><div class="count-lbl">Pending</div></div>
   <div class="count"><div class="count-num charge" id="cntCharges">—</div><div class="count-lbl">To Charge</div></div>
+  <div class="count"><div class="count-num" id="cntDeparting" style="color:var(--terracotta)">—</div><div class="count-lbl">Departing</div></div>
 </div>
 
 <nav class="tabs">
@@ -818,6 +869,7 @@ section.active{display:block}
     <button class="filter-btn" data-filter="notplan">Not on plan</button>
     <button class="filter-btn" data-filter="served">Served</button>
     <button class="filter-btn" data-filter="redwood">Redwood</button>
+    <button class="filter-btn" data-filter="departing">Departing</button>
     <input type="text" class="roster-search" id="rosterSearch" placeholder="Filter by name or room…">
   </div>
   <div class="roster-table" id="rosterTable"></div>
@@ -833,13 +885,13 @@ section.active{display:block}
 <div class="update-stack">
 
   <div class="update-card">
-    <h3>1. In-house list <code style="background:var(--clay-soft);padding:1px 6px;border-radius:4px;font-family:'DM Mono',monospace;font-size:13px;color:var(--forest)">BJINHL</code></h3>
-    <p class="lede">The full list of all in-house guests. Paste this first — it gives every guest a searchable record so even non–meal plan guests can be looked up and charged.</p>
+    <h3>1. In-house list <code style="background:var(--clay-soft);padding:1px 6px;border-radius:4px;font-family:'DM Mono',monospace;font-size:13px;color:var(--forest)">BJINHD</code></h3>
+    <p class="lede">The full list of all in-house guests with details (Redwood, loyalty, group). Paste this first — it gives every guest a searchable record so even non–meal plan guests can be looked up and charged.</p>
     <div class="status-line" id="inhouseStatus">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>
       <span>No in-house list loaded</span>
     </div>
-    <textarea class="paste-area" id="inhouseArea" placeholder="Paste the BJINHL report here — start from the &quot;Room | Guest Name | Alternate Guest Name | …&quot; header row down through the last guest."></textarea>
+    <textarea class="paste-area" id="inhouseArea" placeholder="Paste the BJINHD report here — start from the &quot;Room | Guest Name | Alternate Guest Name | Redwood Level | …&quot; header row down through the last guest."></textarea>
     <div class="update-actions">
       <button class="btn btn-primary" id="loadInhouseBtn">Load in-house list</button>
     </div>
@@ -974,21 +1026,22 @@ function parseInHouse(text){
   if(hIdx === -1) throw new Error('Could not find the header row. Make sure you copied from the row that starts with "Room" "Guest Name".');
 
   const header = lines[hIdx].map(c => (c||'').trim().toLowerCase());
-  // Check this looks like BJINHL not BJMPGR
+  // Check this looks like BJINHD/BJINHL not BJMPGR
   const isInHouse = header.some(c => c.includes('no. of guests') || c.includes('room type') || c.includes('rate plan'));
-  if(!isInHouse) throw new Error('This looks like a meal plan report (BJMPGR), not an in-house list (BJINHL). Paste it in the meal plan section below.');
+  if(!isInHouse) throw new Error('This looks like a meal plan report (BJMPGR), not an in-house list. Paste it in the meal plan section below.');
 
   const idx = {
     room:     header.indexOf('room'),
     name:     header.findIndex(c => c === 'guest name'),
     redwood:  header.findIndex(c => c.includes('redwood')),
+    status:   header.indexOf('status'),
     arrive:   header.indexOf('arrive'),
     depart:   header.indexOf('depart'),
     nGuests:  header.findIndex(c => c.includes('no. of guests')),
     roomType: header.findIndex(c => c === 'room type'),
-    status:   header.indexOf('status'),
     ratePlan: header.findIndex(c => c === 'rate plan'),
     group:    header.findIndex(c => c === 'group name'),
+    loyalty:  header.findIndex(c => c.includes('loyalty level')),
     notes:    header.findIndex(c => c === 'reservation notes'),
     guestNotes: header.findIndex(c => c === 'guest notes')
   };
@@ -1009,12 +1062,21 @@ function parseInHouse(text){
     const noOfGuests = idx.nGuests >= 0 ? row[idx.nGuests] : '';
     const covers = parseCovers(noOfGuests);
 
-    // Extract Redwood level number 1-5 if present
+    // Extract Redwood level number 1-5 and description if present
     let redwoodLevel = '';
+    let redwoodDesc = '';
     if(idx.redwood >= 0 && row[idx.redwood]){
-      const rwMatch = row[idx.redwood].match(/[1-5]/);
+      const rwCell = row[idx.redwood];
+      const rwMatch = rwCell.match(/[1-5]/);
       if(rwMatch) redwoodLevel = rwMatch[0];
+      // Grab anything after the colon, e.g. "R4: Special Attn, Recovery..." → "Special Attn, Recovery..."
+      const descMatch = rwCell.match(/^[^:]+:\s*(.+)$/);
+      redwoodDesc = descMatch ? descMatch[1].trim() : '';
     }
+
+    const loyalty = idx.loyalty >= 0 ? row[idx.loyalty] : '';
+    const departStr = idx.depart >= 0 ? row[idx.depart] : '';
+    const arriveStr = idx.arrive >= 0 ? row[idx.arrive] : '';
 
     guests.push({
       id: guestId(room),
@@ -1023,8 +1085,10 @@ function parseInHouse(text){
       noOfGuests,
       defaultCovers: covers ? covers.adults + covers.children : 1,
       redwoodLevel,
-      arrive:   idx.arrive >= 0 ? row[idx.arrive] : '',
-      depart:   idx.depart >= 0 ? row[idx.depart] : '',
+      redwoodDesc,
+      loyalty,
+      arrive:   arriveStr,
+      depart:   departStr,
       status:   idx.status >= 0 ? row[idx.status] : '',
       ratePlan: idx.ratePlan >= 0 ? row[idx.ratePlan] : '',
       roomType: idx.roomType >= 0 ? row[idx.roomType] : '',
@@ -1129,6 +1193,8 @@ function applyMealPlan(mealPlanGuests){
         noOfGuests: '',
         defaultCovers: 1,
         redwoodLevel: '',
+        redwoodDesc: '',
+        loyalty: '',
         arrive: mp.arrive,
         depart: mp.depart,
         status: mp.status,
@@ -1220,6 +1286,15 @@ function renderCounts(){
   set('cntPending', pending);
   document.getElementById('cntCharges').textContent = (inHouse || toCharge) ? toCharge : '—';
 
+  // Departing today
+  let departing = 0;
+  const today = state.reportDate || '';
+  if(today){
+    const todayKey = normaliseDate(today);
+    departing = state.guests.filter(g => g.depart && normaliseDate(g.depart) === todayKey).length;
+  }
+  document.getElementById('cntDeparting').textContent = inHouse ? departing : '—';
+
   // Tab badges
   document.getElementById('badgeRoster').textContent = inHouse;
   document.getElementById('badgeCharges').textContent = toCharge;
@@ -1298,6 +1373,7 @@ function renderResultCard(g){
 
   const onPlan = g.onMealPlan;
   const rwLevel = g.redwoodLevel || '';
+  const rwDesc  = g.redwoodDesc || '';
   const isTopTier = rwLevel === '1' || rwLevel === '2';
   const isMidTier = rwLevel === '3' || rwLevel === '4';
   const cardClass = [
@@ -1305,6 +1381,16 @@ function renderResultCard(g){
     !onPlan ? 'charge' : '',
     isTopTier ? 'redwood-top' : (isMidTier ? 'redwood-mid' : '')
   ].filter(Boolean).join(' ');
+
+  // Stay timing — is today their departure or arrival?
+  const today = state.reportDate || '';
+  const isDeparting = today && g.depart && normaliseDate(g.depart) === normaliseDate(today);
+  const isArriving  = today && g.arrive && normaliseDate(g.arrive) === normaliseDate(today);
+
+  const loyalty = g.loyalty || '';
+  const hasLoyalty = loyalty && loyalty.toUpperCase() !== '';
+
+  const hasIndicators = hasLoyalty || isDeparting || isArriving || g.group;
 
   return `
     <article class="result ${cardClass}">
@@ -1320,9 +1406,16 @@ function renderResultCard(g){
         </div>
         <div class="result-room ${!onPlan?'charge':''}">Room ${escapeHtml(g.room)}</div>
       </div>
-      ${rwLevel ? `<div class="redwood-badge level-${rwLevel}"><span>Redwood</span><span class="rw-num">${rwLevel}</span></div>` : ''}
+      ${rwLevel ? `<div class="redwood-badge level-${rwLevel}" title="${escapeHtml(rwDesc)}"><span>Redwood</span><span class="rw-num">${rwLevel}</span>${rwDesc?`<span style="font-weight:500;letter-spacing:.04em;text-transform:none;font-size:11px;opacity:.85;margin-left:4px">${escapeHtml(rwDesc)}</span>`:''}</div>` : ''}
+      ${hasIndicators ? `
+        <div class="indicators-row">
+          ${hasLoyalty ? `<span class="chip loyalty-seed" title="Loyalty Level">${escapeHtml(loyalty)}</span>` : ''}
+          ${isArriving ? `<span class="chip arriving">↓ Arriving today</span>` : ''}
+          ${isDeparting ? `<span class="chip departing">↑ Departing today</span>` : ''}
+          ${g.group ? `<span class="chip group" title="Group: ${escapeHtml(g.group)}">${escapeHtml(g.group)}</span>` : ''}
+        </div>
+      ` : ''}
       ${g.mealPlanName ? `<div class="plan-name">${escapeHtml(g.mealPlanName)}</div>` : ''}
-      ${g.group ? `<div class="group-tag">${escapeHtml(g.group)}</div>` : ''}
       <div class="dates-line">
         ${g.ratePlan ? `<span>Rate plan <strong>${escapeHtml(g.ratePlan)}</strong></span>` : ''}
         ${g.arrive ? `<span>Stay <strong>${escapeHtml(g.arrive)} → ${escapeHtml(g.depart)}</strong></span>` : ''}
@@ -1332,6 +1425,20 @@ function renderResultCard(g){
       <div class="meals">${mealCards}</div>
     </article>
   `;
+}
+
+// Normalise "27-May-2026" or "05/27/2026" into a comparable key
+function normaliseDate(s){
+  if(!s) return '';
+  const m1 = s.match(/(\d{1,2})[-/]([A-Za-z]+)[-/](\d{4})/);
+  if(m1){
+    const months = {jan:'01',feb:'02',mar:'03',apr:'04',may:'05',jun:'06',jul:'07',aug:'08',sep:'09',oct:'10',nov:'11',dec:'12'};
+    const mo = months[m1[2].toLowerCase().slice(0,3)] || '';
+    return `${m1[3]}-${mo}-${m1[1].padStart(2,'0')}`;
+  }
+  const m2 = s.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(m2) return `${m2[3]}-${m2[1].padStart(2,'0')}-${m2[2].padStart(2,'0')}`;
+  return s;
 }
 
 function renderMealCard(g, meal, onPlan){
@@ -1638,10 +1745,13 @@ function renderTables(){
     for(const m of ['breakfast']){
       const ci = g.checkedIn[m];
       if(!ci) continue;
+      const today = state.reportDate || '';
+      const isDeparting = today && g.depart && normaliseDate(g.depart) === normaliseDate(today);
       const entry = {
         name: g.name, room: g.room, covers: ci.covers,
         at: ci.at,
         redwoodLevel: g.redwoodLevel || '',
+        isDeparting,
         free: !!g.meals[m], type: 'guest', id: g.id, meal: m
       };
       if(ci.table){
@@ -1763,7 +1873,7 @@ function renderTableCard(table, meal, entries, label){
         ${entries.map(e => `
           <div class="table-guest ${e.free?'':'charge-row'}">
             <span class="tg-tag ${e.free?'free':'pay'}">${e.free?'Plan':'Charge'}</span>
-            <div class="tg-name">${escapeHtml(e.name)}${e.redwoodLevel?`<span class="rw-mini level-${e.redwoodLevel}" title="Redwood ${e.redwoodLevel}">${e.redwoodLevel}</span>`:''}${e.room?`<span class="tg-room">${escapeHtml(e.room)}</span>`:''}</div>
+            <div class="tg-name">${escapeHtml(e.name)}${e.redwoodLevel?`<span class="rw-mini level-${e.redwoodLevel}" title="Redwood ${e.redwoodLevel}">${e.redwoodLevel}</span>`:''}${e.isDeparting?`<span style="background:rgba(184,102,45,.15);color:var(--terracotta);padding:1px 6px;border-radius:8px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;margin-left:6px;vertical-align:middle" title="Departing today">↑</span>`:''}${e.room?`<span class="tg-room">${escapeHtml(e.room)}</span>`:''}</div>
             <span class="tg-covers">${e.covers||0}</span>
             ${e.at?`<span class="tg-time">${formatTime(e.at)}</span>`:''}
             <button class="tg-edit" data-tedit-type="${e.type}" data-tedit-id="${e.id}" data-tedit-meal="${e.meal}" title="${isUnassigned?'Assign table':'Change / unassign table'}">${isUnassigned?'＋':'⋮'}</button>
@@ -1799,6 +1909,14 @@ function renderRoster(){
   } else if(state.rosterFilter === 'redwood'){
     rows = rows.filter(g => g.redwoodLevel)
                .sort((a,b) => (a.redwoodLevel||'9').localeCompare(b.redwoodLevel||'9') || a.name.localeCompare(b.name));
+  } else if(state.rosterFilter === 'departing'){
+    const today = state.reportDate || '';
+    if(today){
+      const todayKey = normaliseDate(today);
+      rows = rows.filter(g => g.depart && normaliseDate(g.depart) === todayKey);
+    } else {
+      rows = [];
+    }
   }
 
   if(state.rosterQuery){
@@ -1811,11 +1929,12 @@ function renderRoster(){
   const body = rows.map(g => {
     const anyServed = ['breakfast'].some(m => g.checkedIn[m]);
     const rw = g.redwoodLevel || '';
-    const rwBadge = rw ? `<span class="rw-mini level-${rw}" title="Redwood ${rw}">${rw}</span>` : '';
+    const rwBadge = rw ? `<span class="rw-mini level-${rw}" title="Redwood ${rw}${g.redwoodDesc?' — '+g.redwoodDesc:''}">${rw}</span>` : '';
+    const loyaltyBadge = g.loyalty ? `<span class="rw-mini-loyalty" title="Loyalty: ${escapeHtml(g.loyalty)}">${escapeHtml(g.loyalty.slice(0,4))}</span>` : '';
     return `
     <div class="roster-row ${anyServed?'served':''}">
       <div class="r-room">${escapeHtml(g.room)}</div>
-      <div class="r-name">${escapeHtml(g.name)}${rwBadge}<span class="sub">${escapeHtml(g.group || g.mealPlanName || g.ratePlan || '')}</span></div>
+      <div class="r-name">${escapeHtml(g.name)}${rwBadge}${loyaltyBadge}<span class="sub">${escapeHtml(g.group || g.mealPlanName || g.ratePlan || '')}</span></div>
       <div class="r-plan ${g.onMealPlan?'yes':'no'}">${g.onMealPlan?'YES':'NO'}</div>
       ${mealCellRoster(g,'breakfast')}
       <div class="r-action"><button data-find="${escapeHtml(g.room)}">Open</button></div>
@@ -2020,7 +2139,7 @@ function toast(msg, kind=''){
    EXPORT CSV
    ============================================================ */
 function exportCSV(){
-  const rows = [['Type','Room','Guest','Redwood','Meal','Covers','Table','Time','Meal plan','Rate plan','Group','Notes']];
+  const rows = [['Type','Room','Guest','Redwood','Loyalty','Meal','Covers','Table','Time','Meal plan','Rate plan','Group','Notes']];
 
   for(const g of state.guests){
     for(const m of ['breakfast']){
@@ -2030,14 +2149,15 @@ function exportCSV(){
       if(ci){
         rows.push([
           onPlan ? 'Plan · served' : 'Charge · in-house',
-          g.room, g.name, g.redwoodLevel || '', m, ci.covers, ci.table || '',
+          g.room, g.name, g.redwoodLevel || '', g.loyalty || '',
+          m, ci.covers, ci.table || '',
           formatTime(ci.at), g.mealPlanName || '',
           g.ratePlan, g.group, onPlan ? '' : 'Not on meal plan'
         ]);
       } else if(onPlan){
         rows.push([
-          'Plan · no-show', g.room, g.name, g.redwoodLevel || '', m,
-          g.meals[m].adults + g.meals[m].children, '', '',
+          'Plan · no-show', g.room, g.name, g.redwoodLevel || '', g.loyalty || '',
+          m, g.meals[m].adults + g.meals[m].children, '', '',
           g.mealPlanName, g.ratePlan, g.group, 'Did not attend'
         ]);
       }
@@ -2045,7 +2165,7 @@ function exportCSV(){
   }
   for(const w of state.walkIns){
     rows.push([
-      'Charge · walk-in', w.room, w.name, '', w.meal,
+      'Charge · walk-in', w.room, w.name, '', '', w.meal,
       w.covers, w.table || '', formatTime(w.at),
       '', '', '', 'Outside walk-in'
     ]);
