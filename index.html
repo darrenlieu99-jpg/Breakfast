@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Meal Plan Service · 1 Hotel Melbourne</title>
+<title>Breakfast Service · From Here by Mike</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -351,6 +351,52 @@ section.active{display:block}
   background:linear-gradient(135deg,#3F5D3A,#2E4538);
   color:#E8DFCB;
   vertical-align:middle;
+}
+
+/* ---------- FO NOTES ---------- */
+.fo-notes{
+  background:var(--cream);
+  border:1px solid var(--clay-soft);
+  border-left:3px solid var(--sage);
+  border-radius:6px;
+  padding:12px 14px;
+  margin-bottom:14px;
+}
+.fo-notes-label{
+  display:flex;align-items:center;gap:6px;
+  font-size:10px;text-transform:uppercase;letter-spacing:.14em;
+  color:var(--sage);font-weight:700;margin-bottom:8px;
+}
+.fo-notes-label svg{width:12px;height:12px}
+.fo-notes-list{
+  display:flex;flex-direction:column;gap:6px;
+  font-size:13px;color:var(--ink);line-height:1.45;
+}
+.fo-note-item{
+  display:flex;gap:8px;align-items:flex-start;
+  white-space:pre-wrap;
+}
+.fo-note-item::before{
+  content:'';flex-shrink:0;
+  width:5px;height:5px;border-radius:50%;
+  background:var(--sage);
+  margin-top:8px;
+}
+
+/* Attention alert variant — note matches a flagged keyword (dietary, allergy, VIP, service recovery, etc.) */
+.fo-notes.attention{
+  border-left-color:#B53A2A;
+  background:rgba(181,58,42,.04);
+  border-color:rgba(181,58,42,.2);
+}
+.fo-notes.attention .fo-notes-label{color:#922F22}
+.fo-notes.attention .fo-note-item.is-flagged{
+  color:#922F22;
+  font-weight:600;
+}
+.fo-notes.attention .fo-note-item.is-flagged::before{
+  background:#B53A2A;
+  width:7px;height:7px;margin-top:7px;
 }
 .meal{
   background:var(--cream);border:1px solid var(--clay-soft);
@@ -812,7 +858,7 @@ section.active{display:block}
 <header>
   <div class="brand">
     <div class="brand-mark">Breakfast Service</div>
-    <div class="brand-sub">In-Room Dining · Meal Plan Console</div>
+    <div class="brand-sub">From Here by Mike · Breakfast Console</div>
   </div>
   <div class="meta-row">
     <div class="meta-date" id="metaDate">No roster loaded</div>
@@ -869,6 +915,7 @@ section.active{display:block}
     <button class="filter-btn" data-filter="notplan">Not on plan</button>
     <button class="filter-btn" data-filter="served">Served</button>
     <button class="filter-btn" data-filter="redwood">Redwood</button>
+    <button class="filter-btn" data-filter="attention">Attention</button>
     <button class="filter-btn" data-filter="departing">Departing</button>
     <input type="text" class="roster-search" id="rosterSearch" placeholder="Filter by name or room…">
   </div>
@@ -980,7 +1027,48 @@ function load(){
    PARSER — shared helpers
    ============================================================ */
 function splitPaste(text){
-  return text.replace(/\r/g,'').split('\n').map(l => l.split('\t'));
+  // Quote-aware TSV parser — Excel wraps cells containing tabs/newlines/quotes in
+  // double quotes, with internal quotes doubled ("" → ").  Naive split() corrupts
+  // multi-line cells, so we walk the input character by character.
+  const rows = [[]];
+  let field = '', inQuotes = false, fieldStart = true;
+  for(let i = 0; i < text.length; i++){
+    const ch = text[i];
+    if(inQuotes){
+      if(ch === '"'){
+        if(text[i + 1] === '"'){ field += '"'; i++; }
+        else { inQuotes = false; }
+      } else {
+        field += ch;
+      }
+    } else {
+      if(ch === '"' && fieldStart){
+        inQuotes = true;
+        fieldStart = false;
+      } else if(ch === '\t'){
+        rows[rows.length - 1].push(field);
+        field = ''; fieldStart = true;
+      } else if(ch === '\n'){
+        rows[rows.length - 1].push(field);
+        rows.push([]);
+        field = ''; fieldStart = true;
+      } else if(ch === '\r'){
+        // skip
+      } else {
+        field += ch;
+        fieldStart = false;
+      }
+    }
+  }
+  // Flush trailing field/row
+  if(field !== '' || rows[rows.length - 1].length > 0){
+    rows[rows.length - 1].push(field);
+  }
+  // Drop a single trailing empty row
+  if(rows.length > 0 && rows[rows.length - 1].length === 1 && rows[rows.length - 1][0] === ''){
+    rows.pop();
+  }
+  return rows;
 }
 
 function findHeader(lines, ...mustHave){
@@ -996,8 +1084,18 @@ function findHeader(lines, ...mustHave){
 function findDateFromHeader(lines, hIdx){
   for(let i = 0; i < hIdx; i++){
     for(const cell of lines[i]){
-      const m = (cell||'').match(/(\d{1,2}[-/](?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[-/]\d{4})/i);
-      if(m) return m[1];
+      const c = cell || '';
+      // Format 1: 27-May-2026 or 27/May/2026
+      const m1 = c.match(/(\d{1,2}[-/](?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[-/]\d{4})/i);
+      if(m1) return m1[1];
+      // Format 2: 05/27/2026 (BJINHD title block — "Between 05/27/2026 and ...")
+      const m2 = c.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      if(m2){
+        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const mo = parseInt(m2[1], 10);
+        const d  = parseInt(m2[2], 10);
+        if(mo >= 1 && mo <= 12) return `${d}-${months[mo - 1]}-${m2[3]}`;
+      }
     }
   }
   return null;
@@ -1049,15 +1147,49 @@ function parseInHouse(text){
   const reportDate = findDateFromHeader(lines, hIdx);
 
   const guests = [];
+  let lastGuest = null; // tracks last guest so we can append note rows to them
+
   for(let i = hIdx + 1; i < lines.length; i++){
     const row = lines[i].map(c => (c||'').trim());
-    if(row.every(c => !c)) continue;
+    if(row.every(c => !c)){ lastGuest = null; continue; }
+
     const room = row[idx.room];
     const name = row[idx.name];
-    if(!room || !name) continue;
+    const col0 = (row[0] || '').toLowerCase();
+
+    // Detect "Comments / Notes:" header row — content sits in column 4
+    const isNotesHeader = col0.startsWith('comments') || col0.startsWith('comment');
+    // Continuation of a note: column 0 empty but column 4 (or another col) has text, and we have a guest in flight
+    const hasRoomNumber = room && /^\d+$/.test(room);
+    const looksLikeNoteContinuation = !hasRoomNumber && !room && lastGuest && row.slice(1).some(c => c.length > 0);
+
+    if(isNotesHeader && lastGuest){
+      // Note text usually lives in column 4, but be defensive — grab the longest non-empty cell after col 0
+      const noteText = pickNoteText(row);
+      if(noteText) lastGuest.foNotes.push(noteText);
+      continue;
+    }
+
+    if(looksLikeNoteContinuation){
+      const noteText = pickNoteText(row);
+      if(noteText) lastGuest.foNotes.push(noteText);
+      continue;
+    }
+
+    if(!room || !name){ lastGuest = null; continue; }
+    // Defensive: real room rows always have a numeric room number.  Catches any
+    // stray content (e.g. mid-cell text leaking out from a malformed paste).
+    if(!/^\d+$/.test(room)){
+      // If we have an in-flight guest, treat this as a note continuation
+      if(lastGuest){
+        const noteText = pickNoteText(row);
+        if(noteText) lastGuest.foNotes.push(noteText);
+      }
+      continue;
+    }
     // Skip footer rows like "Total Reservations: 250" or "1 Hotel & Homes Melbourne"
-    if(room.toLowerCase().startsWith('total') || room.toLowerCase().includes('hotel')) continue;
-    if(!/[A-Za-z]/.test(name) || !name.includes(',')) continue;
+    if(room.toLowerCase().startsWith('total') || room.toLowerCase().includes('hotel')){ lastGuest = null; continue; }
+    if(!/[A-Za-z]/.test(name) || !name.includes(',')){ lastGuest = null; continue; }
 
     const noOfGuests = idx.nGuests >= 0 ? row[idx.nGuests] : '';
     const covers = parseCovers(noOfGuests);
@@ -1078,7 +1210,7 @@ function parseInHouse(text){
     const departStr = idx.depart >= 0 ? row[idx.depart] : '';
     const arriveStr = idx.arrive >= 0 ? row[idx.arrive] : '';
 
-    guests.push({
+    const newGuest = {
       id: guestId(room),
       room,
       name,
@@ -1094,6 +1226,7 @@ function parseInHouse(text){
       roomType: idx.roomType >= 0 ? row[idx.roomType] : '',
       group:    idx.group >= 0 ? row[idx.group] : '',
       notes:    idx.notes >= 0 ? row[idx.notes] : '',
+      foNotes:  [],
       // Meal plan overlay (default = not on plan)
       onMealPlan: false,
       mealPlanName: '',
@@ -1101,10 +1234,22 @@ function parseInHouse(text){
       meals: { breakfast:null, lunch:null, dinner:null },
       // Daily check-in state
       checkedIn: { breakfast:null, lunch:null, dinner:null }
-    });
+    };
+    guests.push(newGuest);
+    lastGuest = newGuest;
   }
 
   return { reportDate, guests };
+}
+
+// Pick the longest non-empty cell from a note row (notes live in col 4 but be defensive)
+function pickNoteText(row){
+  let best = '';
+  for(let i = 1; i < row.length; i++){
+    const c = (row[i] || '').trim();
+    if(c.length > best.length) best = c;
+  }
+  return best;
 }
 
 /* ============================================================
@@ -1202,6 +1347,7 @@ function applyMealPlan(mealPlanGuests){
         roomType: '',
         group: '',
         notes: '',
+        foNotes: [],
         onMealPlan: false,
         mealPlanName: '',
         rateCode: '',
@@ -1415,6 +1561,7 @@ function renderResultCard(g){
           ${g.group ? `<span class="chip group" title="Group: ${escapeHtml(g.group)}">${escapeHtml(g.group)}</span>` : ''}
         </div>
       ` : ''}
+      ${renderFoNotes(g)}
       ${g.mealPlanName ? `<div class="plan-name">${escapeHtml(g.mealPlanName)}</div>` : ''}
       <div class="dates-line">
         ${g.ratePlan ? `<span>Rate plan <strong>${escapeHtml(g.ratePlan)}</strong></span>` : ''}
@@ -1426,6 +1573,9 @@ function renderResultCard(g){
     </article>
   `;
 }
+
+// Keywords that flag a note as needing attention at service — dietary, allergens, VIP, service recovery, handle with care, etc.
+const ATTENTION_REGEX = /allerg|vegan|vegetarian|pescatarian|gluten|coeliac|celiac|dairy|lactose|halal|kosher|nut(\b|s)|peanut|shellfish|seafood|intoleran|dietary|diet\b|GF\b|DF\b|NF\b|\bVIP\b|service recovery|\brecovery\b|handle with care|\bHWC\b|special attention|special attn|birthday|anniversary|honeymoon|complimentary|do not move|priority/i;
 
 // Normalise "27-May-2026" or "05/27/2026" into a comparable key
 function normaliseDate(s){
@@ -1439,6 +1589,28 @@ function normaliseDate(s){
   const m2 = s.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
   if(m2) return `${m2[3]}-${m2[1].padStart(2,'0')}-${m2[2].padStart(2,'0')}`;
   return s;
+}
+
+// Render the Front Office notes panel for a guest, flagging important/dietary/VIP text
+function renderFoNotes(g){
+  const notes = g.foNotes || [];
+  if(notes.length === 0) return '';
+  const isFlagged = (n) => ATTENTION_REGEX.test(n);
+  const anyFlagged = notes.some(isFlagged);
+  return `
+    <div class="fo-notes ${anyFlagged?'attention':''}">
+      <div class="fo-notes-label">
+        ${anyFlagged
+          ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`
+          : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`
+        }
+        Front Office Notes${anyFlagged?' · ATTENTION':''}
+      </div>
+      <div class="fo-notes-list">
+        ${notes.map(n => `<div class="fo-note-item ${isFlagged(n)?'is-flagged':''}">${escapeHtml(n)}</div>`).join('')}
+      </div>
+    </div>
+  `;
 }
 
 function renderMealCard(g, meal, onPlan){
@@ -1909,6 +2081,8 @@ function renderRoster(){
   } else if(state.rosterFilter === 'redwood'){
     rows = rows.filter(g => g.redwoodLevel)
                .sort((a,b) => (a.redwoodLevel||'9').localeCompare(b.redwoodLevel||'9') || a.name.localeCompare(b.name));
+  } else if(state.rosterFilter === 'attention'){
+    rows = rows.filter(g => (g.foNotes || []).some(n => ATTENTION_REGEX.test(n)));
   } else if(state.rosterFilter === 'departing'){
     const today = state.reportDate || '';
     if(today){
@@ -1931,10 +2105,15 @@ function renderRoster(){
     const rw = g.redwoodLevel || '';
     const rwBadge = rw ? `<span class="rw-mini level-${rw}" title="Redwood ${rw}${g.redwoodDesc?' — '+g.redwoodDesc:''}">${rw}</span>` : '';
     const loyaltyBadge = g.loyalty ? `<span class="rw-mini-loyalty" title="Loyalty: ${escapeHtml(g.loyalty)}">${escapeHtml(g.loyalty.slice(0,4))}</span>` : '';
+    const hasNotes = (g.foNotes || []).length > 0;
+    const hasFlagged = hasNotes && g.foNotes.some(n => ATTENTION_REGEX.test(n));
+    const noteBadge = hasNotes
+      ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${hasFlagged?'#B53A2A':'var(--sage)'};margin-left:6px;vertical-align:middle" title="${hasFlagged?'Attention note':'FO note'}: ${escapeHtml(g.foNotes[0].slice(0,60))}"></span>`
+      : '';
     return `
     <div class="roster-row ${anyServed?'served':''}">
       <div class="r-room">${escapeHtml(g.room)}</div>
-      <div class="r-name">${escapeHtml(g.name)}${rwBadge}${loyaltyBadge}<span class="sub">${escapeHtml(g.group || g.mealPlanName || g.ratePlan || '')}</span></div>
+      <div class="r-name">${escapeHtml(g.name)}${rwBadge}${loyaltyBadge}${noteBadge}<span class="sub">${escapeHtml(g.group || g.mealPlanName || g.ratePlan || '')}</span></div>
       <div class="r-plan ${g.onMealPlan?'yes':'no'}">${g.onMealPlan?'YES':'NO'}</div>
       ${mealCellRoster(g,'breakfast')}
       <div class="r-action"><button data-find="${escapeHtml(g.room)}">Open</button></div>
