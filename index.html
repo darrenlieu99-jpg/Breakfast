@@ -1020,6 +1020,16 @@ function load(){
     state.guests           = d.guests || [];
     state.walkIns          = d.walkIns || [];
     state.lastTable        = d.lastTable || '';
+
+    // One-time cleanup: drop any stored guests that aren't valid (no numeric room).
+    // These can appear if an earlier buggy parser captured a fragment of a multi-line
+    // note as a phantom guest row.  Filtering preserves check-ins on real guests.
+    const before = state.guests.length;
+    state.guests = state.guests.filter(g => g && g.room && /^\d+$/.test(String(g.room)));
+    if(state.guests.length < before){
+      console.log(`Cleaned ${before - state.guests.length} phantom guest(s) from stored data.`);
+      save();
+    }
   }catch(e){console.error('load failed',e)}
 }
 
@@ -1151,45 +1161,46 @@ function parseInHouse(text){
 
   for(let i = hIdx + 1; i < lines.length; i++){
     const row = lines[i].map(c => (c||'').trim());
-    if(row.every(c => !c)){ lastGuest = null; continue; }
 
-    const room = row[idx.room];
-    const name = row[idx.name];
-    const col0 = (row[0] || '').toLowerCase();
+    // Blank row — skip but DO NOT null lastGuest.  Reports often have blank lines
+    // inside a multi-line note (the report renders an empty paragraph between
+    // lines), and we want subsequent continuation rows to still attach to the
+    // correct guest.
+    if(row.every(c => !c)) continue;
 
-    // Detect "Comments / Notes:" header row — content sits in column 4
-    const isNotesHeader = col0.startsWith('comments') || col0.startsWith('comment');
-    // Continuation of a note: column 0 empty but column 4 (or another col) has text, and we have a guest in flight
-    const hasRoomNumber = room && /^\d+$/.test(room);
-    const looksLikeNoteContinuation = !hasRoomNumber && !room && lastGuest && row.slice(1).some(c => c.length > 0);
+    const col0Raw = row[0] || '';
+    const col0 = col0Raw.toLowerCase();
 
-    if(isNotesHeader && lastGuest){
-      // Note text usually lives in column 4, but be defensive — grab the longest non-empty cell after col 0
-      const noteText = pickNoteText(row);
-      if(noteText) lastGuest.foNotes.push(noteText);
+    // Known footer / summary rows: "Total Reservations: ...", "1 Hotel & Homes Melbourne", etc.
+    if(/^total\b.*:/i.test(col0Raw) || /^1\s+hotel/i.test(col0Raw) || /^grand total/i.test(col0Raw)){
+      lastGuest = null;
       continue;
     }
 
-    if(looksLikeNoteContinuation){
-      const noteText = pickNoteText(row);
-      if(noteText) lastGuest.foNotes.push(noteText);
-      continue;
-    }
-
-    if(!room || !name){ lastGuest = null; continue; }
-    // Defensive: real room rows always have a numeric room number.  Catches any
-    // stray content (e.g. mid-cell text leaking out from a malformed paste).
-    if(!/^\d+$/.test(room)){
-      // If we have an in-flight guest, treat this as a note continuation
+    // "Comments / Notes:" or "Guest Notes:" header row — attach to lastGuest
+    if(col0.startsWith('comment') || col0.startsWith('guest note')){
       if(lastGuest){
         const noteText = pickNoteText(row);
         if(noteText) lastGuest.foNotes.push(noteText);
       }
       continue;
     }
-    // Skip footer rows like "Total Reservations: 250" or "1 Hotel & Homes Melbourne"
-    if(room.toLowerCase().startsWith('total') || room.toLowerCase().includes('hotel')){ lastGuest = null; continue; }
-    if(!/[A-Za-z]/.test(name) || !name.includes(',')){ lastGuest = null; continue; }
+
+    // Is this a real guest row?  Must have a numeric room AND a name with a comma.
+    const room = row[idx.room];
+    const name = row[idx.name];
+    const isValidGuestRow = room && /^\d+$/.test(room) && name && /[A-Za-z]/.test(name) && name.includes(',');
+
+    if(!isValidGuestRow){
+      // Not a guest row — treat as a note continuation if we have a guest in flight.
+      // This catches multi-line note fragments like "Ginal Chauhan\t- no beef..."
+      // that an unquoted TSV paste splits across rows.
+      if(lastGuest){
+        const noteText = pickNoteText(row);
+        if(noteText) lastGuest.foNotes.push(noteText);
+      }
+      continue;
+    }
 
     const noOfGuests = idx.nGuests >= 0 ? row[idx.nGuests] : '';
     const covers = parseCovers(noOfGuests);
