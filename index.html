@@ -240,77 +240,68 @@ section.active{display:block}
   gap:12px;
 }
 
-/* ---------- FLAGS, NOTES, ALERTS ---------- */
-.flag-row{
-  display:flex;flex-wrap:wrap;gap:6px;
-  margin-bottom:14px;
-}
-.flag-chip{
-  display:inline-flex;align-items:center;gap:5px;
+/* ---------- REDWOOD BADGES ---------- */
+.redwood-badge{
+  display:inline-flex;align-items:center;gap:8px;
   padding:5px 12px;border-radius:14px;
-  font-size:11px;font-weight:700;letter-spacing:.06em;
-  font-family:inherit;cursor:pointer;
+  font-size:10px;letter-spacing:.16em;
+  text-transform:uppercase;font-weight:700;
+  margin-bottom:14px;
+}
+.redwood-badge .rw-num{
+  font-family:'Fraunces',serif;
+  font-size:15px;letter-spacing:0;
+  line-height:1;font-weight:600;
+}
+.redwood-badge.level-1,
+.redwood-badge.level-2{
+  background:linear-gradient(135deg,#C4A062,#9C6B3F);
+  color:#FFF8E8;
+  box-shadow:0 2px 8px rgba(156,107,63,.35), inset 0 1px 0 rgba(255,255,255,.2);
+}
+.redwood-badge.level-3,
+.redwood-badge.level-4{
+  background:rgba(110,127,102,.15);
+  color:var(--moss);
+  border:1px solid rgba(110,127,102,.3);
+}
+.redwood-badge.level-5{
+  background:var(--clay-soft);
+  color:var(--ink-soft);
   border:1px solid var(--clay);
-  background:var(--paper);color:var(--ink-faint);
-  transition:all .15s ease;
-}
-.flag-chip:hover{border-color:var(--sage);color:var(--ink-soft);transform:translateY(-1px)}
-.flag-chip.active{color:var(--cream);border-color:transparent}
-.flag-chip.active.vip{background:var(--gold)}
-.flag-chip.active.hwc{background:#7A3540}
-.flag-chip.active.allergy{background:#B53A2A}
-.flag-chip.active.repeat{background:var(--sage)}
-.flag-chip.active.special{background:var(--terracotta)}
-
-.alert-banner{
-  display:flex;align-items:center;gap:10px;
-  padding:11px 14px;border-radius:10px;
-  margin-bottom:14px;
-  font-size:13px;font-weight:600;
-}
-.alert-banner.allergy{
-  background:rgba(181,58,42,.1);
-  color:#922F22;
-  border:1px solid rgba(181,58,42,.3);
-}
-.alert-banner svg{width:18px;height:18px;flex-shrink:0}
-
-.opera-notes{
-  background:var(--cream);
-  border:1px solid var(--clay-soft);
-  border-left:3px solid var(--sage);
-  border-radius:6px;
-  padding:10px 14px;
-  margin-bottom:14px;
-  font-size:13px;color:var(--ink-soft);
-  line-height:1.5;white-space:pre-wrap;
-}
-.notes-label{
-  font-size:10px;text-transform:uppercase;letter-spacing:.14em;
-  color:var(--sage);font-weight:700;margin-bottom:4px;
 }
 
-.custom-note-box{
-  background:rgba(110,127,102,.08);
-  border:1px solid rgba(110,127,102,.25);
-  border-radius:8px;
-  padding:10px 14px;
-  margin-bottom:14px;
-  font-size:13px;color:var(--ink);
-  display:flex;justify-content:space-between;align-items:flex-start;gap:10px;
+.result.redwood-top::before{
+  background:linear-gradient(to bottom,#C4A062,#9C6B3F);
+  width:5px;
 }
-.custom-note-box .note-content{flex:1;white-space:pre-wrap}
-.custom-note-box button{
-  background:none;border:none;cursor:pointer;
-  color:var(--ink-faint);padding:3px 8px;border-radius:4px;
-  font-size:11px;text-transform:uppercase;letter-spacing:.06em;
-  font-weight:700;white-space:nowrap;
+.result.redwood-top{
+  background:linear-gradient(to right,rgba(156,107,63,.06),var(--paper) 100px);
 }
-.custom-note-box button:hover{color:var(--terracotta);background:rgba(184,102,45,.08)}
+.result.redwood-mid::before{
+  background:var(--sage);
+}
 
-.result.vip::before{background:var(--gold);width:5px}
-.result.vip{background:linear-gradient(to right,rgba(156,107,63,.05),var(--paper) 80px)}
-.result.allergy::before{background:#B53A2A;width:5px}
+.rw-mini{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:22px;height:22px;border-radius:50%;
+  font-family:'Fraunces',serif;font-size:12px;font-weight:600;
+  margin-left:6px;line-height:1;
+  flex-shrink:0;vertical-align:middle;
+}
+.rw-mini.level-1,.rw-mini.level-2{
+  background:linear-gradient(135deg,#C4A062,#9C6B3F);
+  color:#FFF8E8;
+}
+.rw-mini.level-3,.rw-mini.level-4{
+  background:rgba(110,127,102,.15);
+  color:var(--moss);
+  border:1px solid rgba(110,127,102,.3);
+}
+.rw-mini.level-5{
+  background:var(--clay-soft);
+  color:var(--ink-soft);
+}
 .meal{
   background:var(--cream);border:1px solid var(--clay-soft);
   border-radius:10px;padding:14px 16px;
@@ -826,6 +817,7 @@ section.active{display:block}
     <button class="filter-btn" data-filter="onplan">On plan</button>
     <button class="filter-btn" data-filter="notplan">Not on plan</button>
     <button class="filter-btn" data-filter="served">Served</button>
+    <button class="filter-btn" data-filter="redwood">Redwood</button>
     <input type="text" class="roster-search" id="rosterSearch" placeholder="Filter by name or room…">
   </div>
   <div class="roster-table" id="rosterTable"></div>
@@ -989,6 +981,7 @@ function parseInHouse(text){
   const idx = {
     room:     header.indexOf('room'),
     name:     header.findIndex(c => c === 'guest name'),
+    redwood:  header.findIndex(c => c.includes('redwood')),
     arrive:   header.indexOf('arrive'),
     depart:   header.indexOf('depart'),
     nGuests:  header.findIndex(c => c.includes('no. of guests')),
@@ -1016,12 +1009,20 @@ function parseInHouse(text){
     const noOfGuests = idx.nGuests >= 0 ? row[idx.nGuests] : '';
     const covers = parseCovers(noOfGuests);
 
+    // Extract Redwood level number 1-5 if present
+    let redwoodLevel = '';
+    if(idx.redwood >= 0 && row[idx.redwood]){
+      const rwMatch = row[idx.redwood].match(/[1-5]/);
+      if(rwMatch) redwoodLevel = rwMatch[0];
+    }
+
     guests.push({
       id: guestId(room),
       room,
       name,
       noOfGuests,
       defaultCovers: covers ? covers.adults + covers.children : 1,
+      redwoodLevel,
       arrive:   idx.arrive >= 0 ? row[idx.arrive] : '',
       depart:   idx.depart >= 0 ? row[idx.depart] : '',
       status:   idx.status >= 0 ? row[idx.status] : '',
@@ -1034,9 +1035,6 @@ function parseInHouse(text){
       mealPlanName: '',
       rateCode: '',
       meals: { breakfast:null, lunch:null, dinner:null },
-      // Flags and custom note (preserved across roster reloads)
-      flags: [],
-      customNote: '',
       // Daily check-in state
       checkedIn: { breakfast:null, lunch:null, dinner:null }
     });
@@ -1130,6 +1128,7 @@ function applyMealPlan(mealPlanGuests){
         name: mp.name,
         noOfGuests: '',
         defaultCovers: 1,
+        redwoodLevel: '',
         arrive: mp.arrive,
         depart: mp.depart,
         status: mp.status,
@@ -1141,8 +1140,6 @@ function applyMealPlan(mealPlanGuests){
         mealPlanName: '',
         rateCode: '',
         meals: { breakfast:null, lunch:null, dinner:null },
-        flags: [],
-        customNote: '',
         checkedIn: { breakfast:null, lunch:null, dinner:null }
       };
       state.guests.push(g);
@@ -1300,19 +1297,14 @@ function renderResultCard(g){
   }
 
   const onPlan = g.onMealPlan;
-  const flags = g.flags || [];
-  const hasAllergy = flags.includes('allergy');
-  const hasVip = flags.includes('vip');
+  const rwLevel = g.redwoodLevel || '';
+  const isTopTier = rwLevel === '1' || rwLevel === '2';
+  const isMidTier = rwLevel === '3' || rwLevel === '4';
   const cardClass = [
     allServedPlan ? 'checked' : '',
     !onPlan ? 'charge' : '',
-    hasAllergy ? 'allergy' : (hasVip ? 'vip' : '')
+    isTopTier ? 'redwood-top' : (isMidTier ? 'redwood-mid' : '')
   ].filter(Boolean).join(' ');
-
-  const flagDef = {
-    vip:'⭐ VIP', hwc:'♦ HWC', allergy:'⚠ ALLERGY',
-    repeat:'↻ REPEAT', special:'✦ SPECIAL'
-  };
 
   return `
     <article class="result ${cardClass}">
@@ -1328,6 +1320,7 @@ function renderResultCard(g){
         </div>
         <div class="result-room ${!onPlan?'charge':''}">Room ${escapeHtml(g.room)}</div>
       </div>
+      ${rwLevel ? `<div class="redwood-badge level-${rwLevel}"><span>Redwood</span><span class="rw-num">${rwLevel}</span></div>` : ''}
       ${g.mealPlanName ? `<div class="plan-name">${escapeHtml(g.mealPlanName)}</div>` : ''}
       ${g.group ? `<div class="group-tag">${escapeHtml(g.group)}</div>` : ''}
       <div class="dates-line">
@@ -1336,33 +1329,6 @@ function renderResultCard(g){
         ${g.roomType ? `<span>${escapeHtml(g.roomType)}</span>` : ''}
         ${g.noOfGuests ? `<span><strong>${escapeHtml(g.noOfGuests)}</strong> in room</span>` : ''}
       </div>
-
-      ${hasAllergy ? `
-        <div class="alert-banner allergy">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-            <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-          </svg>
-          <span>Allergy / dietary requirement noted${g.customNote ? ' — see note below' : ''}</span>
-        </div>
-      ` : ''}
-
-      ${g.notes ? `<div class="opera-notes"><div class="notes-label">Reservation notes</div>${escapeHtml(g.notes)}</div>` : ''}
-
-      ${g.customNote ? `
-        <div class="custom-note-box">
-          <div class="note-content"><div class="notes-label">Service note</div>${escapeHtml(g.customNote)}</div>
-          <button data-action="edit-note" data-id="${g.id}">Edit</button>
-        </div>
-      ` : ''}
-
-      <div class="flag-row">
-        ${Object.keys(flagDef).map(f => `
-          <button class="flag-chip ${f} ${flags.includes(f)?'active':''}" data-action="toggle-flag" data-id="${g.id}" data-flag="${f}">${flagDef[f]}</button>
-        `).join('')}
-        ${!g.customNote ? `<button class="flag-chip" data-action="edit-note" data-id="${g.id}" style="font-weight:500">+ Note</button>` : ''}
-      </div>
-
       <div class="meals">${mealCards}</div>
     </article>
   `;
@@ -1594,37 +1560,6 @@ function bindResultActions(){
       toast(t ? `Moved to T${t}` : 'Unassigned','success');
     };
   });
-
-  document.querySelectorAll('[data-action="toggle-flag"]').forEach(b => {
-    b.onclick = () => {
-      const g = state.guests.find(x => x.id === b.dataset.id);
-      if(!g) return;
-      if(!g.flags) g.flags = [];
-      const flag = b.dataset.flag;
-      const wasActive = g.flags.includes(flag);
-      if(wasActive){
-        g.flags = g.flags.filter(f => f !== flag);
-      } else {
-        g.flags.push(flag);
-      }
-      save();
-      renderResults(document.getElementById('searchInput').value);
-      toast(`${flag.toUpperCase()} ${wasActive?'removed':'added'}`, wasActive ? '' : 'success');
-    };
-  });
-
-  document.querySelectorAll('[data-action="edit-note"]').forEach(b => {
-    b.onclick = () => {
-      const g = state.guests.find(x => x.id === b.dataset.id);
-      if(!g) return;
-      const newNote = prompt(`Service note for ${shortName(g.name)}:`, g.customNote || '');
-      if(newNote === null) return;
-      g.customNote = newNote.trim();
-      save();
-      renderResults(document.getElementById('searchInput').value);
-      toast(newNote.trim() ? 'Note saved' : 'Note cleared');
-    };
-  });
 }
 
 /* ============================================================
@@ -1706,6 +1641,7 @@ function renderTables(){
       const entry = {
         name: g.name, room: g.room, covers: ci.covers,
         at: ci.at,
+        redwoodLevel: g.redwoodLevel || '',
         free: !!g.meals[m], type: 'guest', id: g.id, meal: m
       };
       if(ci.table){
@@ -1720,6 +1656,7 @@ function renderTables(){
     const entry = {
       name: w.name, room: w.room, covers: w.covers,
       at: w.at,
+      redwoodLevel: '',
       free: false, type: 'walkin', id: w.id, meal: w.meal
     };
     if(w.table){
@@ -1826,7 +1763,7 @@ function renderTableCard(table, meal, entries, label){
         ${entries.map(e => `
           <div class="table-guest ${e.free?'':'charge-row'}">
             <span class="tg-tag ${e.free?'free':'pay'}">${e.free?'Plan':'Charge'}</span>
-            <div class="tg-name">${escapeHtml(e.name)}${e.room?`<span class="tg-room">${escapeHtml(e.room)}</span>`:''}</div>
+            <div class="tg-name">${escapeHtml(e.name)}${e.redwoodLevel?`<span class="rw-mini level-${e.redwoodLevel}" title="Redwood ${e.redwoodLevel}">${e.redwoodLevel}</span>`:''}${e.room?`<span class="tg-room">${escapeHtml(e.room)}</span>`:''}</div>
             <span class="tg-covers">${e.covers||0}</span>
             ${e.at?`<span class="tg-time">${formatTime(e.at)}</span>`:''}
             <button class="tg-edit" data-tedit-type="${e.type}" data-tedit-id="${e.id}" data-tedit-meal="${e.meal}" title="${isUnassigned?'Assign table':'Change / unassign table'}">${isUnassigned?'＋':'⋮'}</button>
@@ -1859,6 +1796,9 @@ function renderRoster(){
     rows = rows.filter(g => !g.onMealPlan);
   } else if(state.rosterFilter === 'served'){
     rows = rows.filter(g => ['breakfast'].some(m => g.checkedIn[m]));
+  } else if(state.rosterFilter === 'redwood'){
+    rows = rows.filter(g => g.redwoodLevel)
+               .sort((a,b) => (a.redwoodLevel||'9').localeCompare(b.redwoodLevel||'9') || a.name.localeCompare(b.name));
   }
 
   if(state.rosterQuery){
@@ -1870,15 +1810,12 @@ function renderRoster(){
 
   const body = rows.map(g => {
     const anyServed = ['breakfast'].some(m => g.checkedIn[m]);
-    const flags = g.flags || [];
-    const flagBadges = flags.length ? ' ' + flags.map(f => {
-      const map = {vip:'⭐',hwc:'♦',allergy:'⚠',repeat:'↻',special:'✦'};
-      return `<span title="${f}" style="margin-left:3px;font-size:11px">${map[f]||''}</span>`;
-    }).join('') : '';
+    const rw = g.redwoodLevel || '';
+    const rwBadge = rw ? `<span class="rw-mini level-${rw}" title="Redwood ${rw}">${rw}</span>` : '';
     return `
     <div class="roster-row ${anyServed?'served':''}">
       <div class="r-room">${escapeHtml(g.room)}</div>
-      <div class="r-name">${escapeHtml(g.name)}${flagBadges}<span class="sub">${escapeHtml(g.group || g.mealPlanName || g.ratePlan || '')}</span></div>
+      <div class="r-name">${escapeHtml(g.name)}${rwBadge}<span class="sub">${escapeHtml(g.group || g.mealPlanName || g.ratePlan || '')}</span></div>
       <div class="r-plan ${g.onMealPlan?'yes':'no'}">${g.onMealPlan?'YES':'NO'}</div>
       ${mealCellRoster(g,'breakfast')}
       <div class="r-action"><button data-find="${escapeHtml(g.room)}">Open</button></div>
@@ -2083,7 +2020,7 @@ function toast(msg, kind=''){
    EXPORT CSV
    ============================================================ */
 function exportCSV(){
-  const rows = [['Type','Room','Guest','Meal','Covers','Table','Time','Meal plan','Rate plan','Group','Notes']];
+  const rows = [['Type','Room','Guest','Redwood','Meal','Covers','Table','Time','Meal plan','Rate plan','Group','Notes']];
 
   for(const g of state.guests){
     for(const m of ['breakfast']){
@@ -2093,13 +2030,13 @@ function exportCSV(){
       if(ci){
         rows.push([
           onPlan ? 'Plan · served' : 'Charge · in-house',
-          g.room, g.name, m, ci.covers, ci.table || '',
+          g.room, g.name, g.redwoodLevel || '', m, ci.covers, ci.table || '',
           formatTime(ci.at), g.mealPlanName || '',
           g.ratePlan, g.group, onPlan ? '' : 'Not on meal plan'
         ]);
       } else if(onPlan){
         rows.push([
-          'Plan · no-show', g.room, g.name, m,
+          'Plan · no-show', g.room, g.name, g.redwoodLevel || '', m,
           g.meals[m].adults + g.meals[m].children, '', '',
           g.mealPlanName, g.ratePlan, g.group, 'Did not attend'
         ]);
@@ -2108,7 +2045,7 @@ function exportCSV(){
   }
   for(const w of state.walkIns){
     rows.push([
-      'Charge · walk-in', w.room, w.name, w.meal,
+      'Charge · walk-in', w.room, w.name, '', w.meal,
       w.covers, w.table || '', formatTime(w.at),
       '', '', '', 'Outside walk-in'
     ]);
@@ -2185,18 +2122,14 @@ function init(){
         r.textContent = 'No guest rows detected. Make sure you copied the header row down through the guests.';
         return;
       }
-      // Preserve check-ins, flags, notes and meal plan overlay for guests still in-house (same room id)
+      // Preserve check-ins and meal plan overlay for guests still in-house (same room id)
       const existing = Object.fromEntries(state.guests.map(g => [g.id, {
         checkedIn: g.checkedIn,
-        flags: g.flags || [],
-        customNote: g.customNote || '',
         onMealPlan: g.onMealPlan, mealPlanName: g.mealPlanName, rateCode: g.rateCode, meals: g.meals
       }]));
       for(const g of guests){
         if(existing[g.id]){
           g.checkedIn    = existing[g.id].checkedIn;
-          g.flags        = existing[g.id].flags;
-          g.customNote   = existing[g.id].customNote;
           g.onMealPlan   = existing[g.id].onMealPlan;
           g.mealPlanName = existing[g.id].mealPlanName;
           g.rateCode     = existing[g.id].rateCode;
