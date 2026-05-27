@@ -87,6 +87,12 @@ body{
   font-size:10px;text-transform:uppercase;letter-spacing:.14em;
   color:var(--ink-soft);margin-top:6px;font-weight:500;
 }
+.count-sub{
+  font-size:10px;color:var(--ink-faint);
+  font-family:'DM Mono',monospace;font-weight:500;
+  margin-top:3px;letter-spacing:.02em;
+  min-height:13px;
+}
 
 /* ---------- TABS ---------- */
 .tabs{
@@ -145,19 +151,6 @@ section.active{display:block}
 }
 .search-clear:hover{background:var(--clay);color:var(--ink)}
 .search-clear.visible{display:flex}
-
-.last-table-pill{
-  display:inline-flex;align-items:center;gap:8px;
-  margin-bottom:14px;padding:6px 14px;
-  background:var(--paper);border:1px solid var(--clay);
-  border-radius:20px;font-size:13px;color:var(--ink-soft);
-}
-.last-table-pill strong{color:var(--forest);font-family:'DM Mono',monospace;font-weight:600}
-.last-table-pill button{
-  background:none;border:none;cursor:pointer;color:var(--ink-faint);
-  font-size:14px;padding:0 0 0 4px;line-height:1;
-}
-.last-table-pill button:hover{color:var(--terracotta)}
 
 .empty-hint{
   text-align:center;padding:36px 20px;
@@ -867,7 +860,11 @@ section.active{display:block}
 </header>
 
 <div class="counts">
-  <div class="count"><div class="count-num" id="cntInHouse">—</div><div class="count-lbl">In House</div></div>
+  <div class="count">
+    <div class="count-num" id="cntToServe">—</div>
+    <div class="count-sub" id="cntToServeSub"></div>
+    <div class="count-lbl">To Serve</div>
+  </div>
   <div class="count"><div class="count-num" id="cntPlan">—</div><div class="count-lbl">On Plan</div></div>
   <div class="count"><div class="count-num success" id="cntServed">—</div><div class="count-lbl">Served</div></div>
   <div class="count"><div class="count-num muted" id="cntPending">—</div><div class="count-lbl">Pending</div></div>
@@ -893,7 +890,6 @@ section.active{display:block}
     </button>
   </div>
 
-  <div id="lastTableSlot"></div>
   <div id="results"></div>
 
   <div class="feed" id="feedSection" style="display:none">
@@ -990,7 +986,7 @@ let state = {
   mealPlanLoadedAt: null,
   guests: [],         // merged list: in-house guests with optional meal plan overlay
   walkIns: [],        // true outside walk-ins (rare)
-  lastTable: '',      // for fast same-party check-ins
+  totalGuests: '',    // raw "343 / 4" string from BJINHD footer
   rosterFilter: 'all',
   rosterQuery: '',
   tablesFilter: 'all'
@@ -1004,7 +1000,7 @@ function save(){
       mealPlanLoadedAt: state.mealPlanLoadedAt,
       guests: state.guests,
       walkIns: state.walkIns,
-      lastTable: state.lastTable
+      totalGuests: state.totalGuests
     }));
   }catch(e){console.error('save failed',e)}
 }
@@ -1019,7 +1015,7 @@ function load(){
     state.mealPlanLoadedAt = d.mealPlanLoadedAt || null;
     state.guests           = d.guests || [];
     state.walkIns          = d.walkIns || [];
-    state.lastTable        = d.lastTable || '';
+    state.totalGuests      = d.totalGuests || '';
 
     // One-time cleanup: drop any stored guests that aren't valid (no numeric room).
     // These can appear if an earlier buggy parser captured a fragment of a multi-line
@@ -1158,6 +1154,7 @@ function parseInHouse(text){
 
   const guests = [];
   let lastGuest = null; // tracks last guest so we can append note rows to them
+  let totalGuestsRaw = ''; // "343 / 4" string captured from BJINHD footer
 
   for(let i = hIdx + 1; i < lines.length; i++){
     const row = lines[i].map(c => (c||'').trim());
@@ -1173,6 +1170,13 @@ function parseInHouse(text){
 
     // Known footer / summary rows: "Total Reservations: ...", "1 Hotel & Homes Melbourne", etc.
     if(/^total\b.*:/i.test(col0Raw) || /^1\s+hotel/i.test(col0Raw) || /^grand total/i.test(col0Raw)){
+      // Special case: capture "Total Guests: 343 / 4" so we can drive a countdown
+      if(/total\s+guests/i.test(col0Raw)){
+        for(let j = 1; j < row.length; j++){
+          const v = (row[j] || '').trim();
+          if(v && /\d/.test(v)){ totalGuestsRaw = v; break; }
+        }
+      }
       lastGuest = null;
       continue;
     }
@@ -1250,7 +1254,7 @@ function parseInHouse(text){
     lastGuest = newGuest;
   }
 
-  return { reportDate, guests };
+  return { reportDate, guests, totalGuestsRaw };
 }
 
 // Pick the longest non-empty cell from a note row (notes live in col 4 but be defensive)
@@ -1425,23 +1429,41 @@ function renderCounts(){
   const inHouse = state.guests.length;
   const onPlan = state.guests.filter(g => g.onMealPlan).length;
   let served = 0, pending = 0, chargedCheckins = 0;
+  let coversServed = 0; // total covers actually checked in (in-house only, walk-ins don't draw down the in-house pool)
   for(const g of state.guests){
     for(const m of ['breakfast']){
+      const ci = g.checkedIn[m];
       if(g.meals[m]){
-        if(g.checkedIn[m]) served++; else pending++;
+        if(ci) served++; else pending++;
       }
-      // Charged check-ins: any check-in where the guest doesn't have that meal entitlement
-      if(g.checkedIn[m] && !g.meals[m]) chargedCheckins++;
+      if(ci && !g.meals[m]) chargedCheckins++;
+      if(ci) coversServed += (ci.covers || 0);
     }
   }
   const toCharge = chargedCheckins + state.walkIns.length;
 
   const set = (id,v) => document.getElementById(id).textContent = inHouse ? v : '—';
-  set('cntInHouse', inHouse);
   set('cntPlan', onPlan);
   set('cntServed', served);
   set('cntPending', pending);
   document.getElementById('cntCharges').textContent = (inHouse || toCharge) ? toCharge : '—';
+
+  // To Serve countdown: total in-house headcount from BJINHD minus covers checked in
+  const tg = parseTotalGuests(state.totalGuests);
+  const numEl = document.getElementById('cntToServe');
+  const subEl = document.getElementById('cntToServeSub');
+  if(tg){
+    const remaining = Math.max(0, tg.total - coversServed);
+    numEl.textContent = remaining;
+    subEl.textContent = `of ${tg.total}${tg.children > 0 ? ` · ${tg.adults}+${tg.children}k` : ''}`;
+  } else if(inHouse){
+    // BJINHD not loaded but we have guest rows — fall back to room count, no subtitle
+    numEl.textContent = inHouse;
+    subEl.textContent = 'rooms';
+  } else {
+    numEl.textContent = '—';
+    subEl.textContent = '';
+  }
 
   // Departing today
   let departing = 0;
@@ -1456,6 +1478,21 @@ function renderCounts(){
   document.getElementById('badgeRoster').textContent = inHouse;
   document.getElementById('badgeCharges').textContent = toCharge;
   document.getElementById('badgeTables').textContent = countTables();
+}
+
+// Parse "343 / 4" → { adults: 343, children: 4, total: 347 }
+function parseTotalGuests(raw){
+  if(!raw) return null;
+  const m = String(raw).match(/(\d+)\s*\/\s*(\d+)/);
+  if(!m){
+    // Maybe just a single number
+    const m2 = String(raw).match(/(\d+)/);
+    if(!m2) return null;
+    const n = +m2[1];
+    return { adults: n, children: 0, total: n };
+  }
+  const adults = +m[1], children = +m[2];
+  return { adults, children, total: adults + children };
 }
 
 function countTables(){
@@ -1476,22 +1513,6 @@ function countTables(){
    ============================================================ */
 function renderResults(query){
   const wrap = document.getElementById('results');
-  const lastSlot = document.getElementById('lastTableSlot');
-
-  // Last-table pill
-  if(state.lastTable){
-    lastSlot.innerHTML = `<div class="last-table-pill">
-      Last table used: <strong>${escapeHtml(state.lastTable)}</strong>
-      <button id="clearLastTable" title="Clear">×</button>
-    </div>`;
-    document.getElementById('clearLastTable').onclick = () => {
-      state.lastTable = '';
-      save();
-      renderResults(document.getElementById('searchInput').value);
-    };
-  } else {
-    lastSlot.innerHTML = '';
-  }
 
   if(!query){
     wrap.innerHTML = state.guests.length
@@ -1499,7 +1520,7 @@ function renderResults(query){
       : `<div class="empty-state">
            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
            <h3>No roster loaded yet</h3>
-           <p>Head to <strong>Update Data</strong> to paste in today's BJINHL and BJMPGR.</p>
+           <p>Head to <strong>Update Data</strong> to paste in today's BJINHD and BJMPGR.</p>
          </div>`;
     return;
   }
@@ -1663,7 +1684,7 @@ function renderMealCard(g, meal, onPlan){
       <div class="meal-covers">${total} ${total===1?'cover':'covers'}</div>
       <div class="meal-covers-detail">${detail}</div>
       <div class="checkin-form">
-        <input type="text" inputmode="numeric" class="table-input" id="t-${g.id}-${meal}" placeholder="Table number" value="${escapeHtml(state.lastTable)}" autocomplete="off">
+        <input type="text" inputmode="numeric" class="table-input" id="t-${g.id}-${meal}" placeholder="Table number" value="" autocomplete="off">
         <button class="btn btn-success" data-action="check" data-id="${g.id}" data-meal="${meal}" data-covers="${total}">Check in</button>
       </div>
     </div>
@@ -1708,7 +1729,7 @@ function renderChargeCards(g){
         <div class="meal-covers-detail">Set covers + table</div>
         <div class="checkin-form">
           <div class="input-row">
-            <input type="text" inputmode="numeric" class="table-input" id="t-${g.id}-${meal}" placeholder="Table number" value="${escapeHtml(state.lastTable)}" autocomplete="off">
+            <input type="text" inputmode="numeric" class="table-input" id="t-${g.id}-${meal}" placeholder="Table number" value="" autocomplete="off">
             <input type="number" min="1" max="20" class="covers-input" id="c-${g.id}-${meal}" value="${g.defaultCovers}" title="Covers">
           </div>
           <button class="btn btn-charge" data-action="check-charge" data-id="${g.id}" data-meal="${meal}">Check in</button>
@@ -1742,7 +1763,7 @@ function renderNoMatch(query){
         <div class="form-row">
           <div class="field">
             <label>Table</label>
-            <input type="text" inputmode="numeric" id="wfTable" value="${escapeHtml(state.lastTable)}" placeholder="—">
+            <input type="text" inputmode="numeric" id="wfTable" value="" placeholder="—">
           </div>
           <div class="field">
             <label>Covers</label>
@@ -1769,7 +1790,6 @@ function bindWalkinForm(){
       return;
     }
     addWalkIn({ name: name || '—', room, meal, covers, table });
-    if(table) state.lastTable = table;
     document.getElementById('searchInput').value = '';
     document.getElementById('searchClear').classList.remove('visible');
     renderResults('');
@@ -1792,7 +1812,6 @@ function bindResultActions(){
         table,
         covers
       };
-      if(table) state.lastTable = table;
       save();
       renderResults(document.getElementById('searchInput').value);
       renderFeed(); renderCounts(); renderRoster(); renderTables();
@@ -1810,7 +1829,6 @@ function bindResultActions(){
       const table = tableInput ? tableInput.value.trim() : '';
       const covers = parseInt(coversInput.value,10) || 1;
       g.checkedIn[meal] = { at: new Date().toISOString(), table, covers };
-      if(table) state.lastTable = table;
       save();
       renderResults(document.getElementById('searchInput').value);
       renderFeed(); renderCounts(); renderRoster(); renderTables();
@@ -1843,7 +1861,6 @@ function bindResultActions(){
       if(newTable === null) return;
       const t = newTable.trim();
       g.checkedIn[meal] = { ...ci, table: t };
-      if(t) state.lastTable = t;
       save();
       renderResults(document.getElementById('searchInput').value);
       renderFeed(); renderCounts(); renderTables();
@@ -2021,7 +2038,6 @@ function renderTables(){
         const w = state.walkIns.find(x => x.id === id);
         w.table = t;
       }
-      if(t) state.lastTable = t;
       save();
       renderTables();
       renderResults(document.getElementById('searchInput').value);
@@ -2426,7 +2442,7 @@ function init(){
       return;
     }
     try{
-      const { reportDate, guests } = parseInHouse(text);
+      const { reportDate, guests, totalGuestsRaw } = parseInHouse(text);
       if(guests.length === 0){
         r.className = 'parse-result error';
         r.textContent = 'No guest rows detected. Make sure you copied the header row down through the guests.';
@@ -2448,6 +2464,7 @@ function init(){
       }
       state.guests = guests;
       state.reportDate = reportDate || state.reportDate;
+      state.totalGuests = totalGuestsRaw || state.totalGuests;
       state.inHouseLoadedAt = new Date().toISOString();
       save();
       renderHeader(); renderCounts(); renderResults(''); renderRoster(); renderTables(); renderUpdateStatus();
@@ -2496,7 +2513,6 @@ function init(){
     if(!confirm('Clear all check-ins and walk-in charges? The guest rosters stay.')) return;
     for(const g of state.guests){ g.checkedIn = {breakfast:null,lunch:null,dinner:null}; }
     state.walkIns = [];
-    state.lastTable = '';
     save();
     renderHeader(); renderCounts(); renderResults(''); renderFeed(); renderRoster(); renderTables(); renderCharges();
     toast('Check-ins cleared','success');
@@ -2507,7 +2523,7 @@ function init(){
     localStorage.removeItem(STORAGE_KEY);
     state = {
       reportDate:null, inHouseLoadedAt:null, mealPlanLoadedAt:null,
-      guests:[], walkIns:[], lastTable:'',
+      guests:[], walkIns:[], totalGuests:'',
       rosterFilter:'all', rosterQuery:'', tablesFilter:'all'
     };
     renderHeader(); renderCounts(); renderResults(''); renderFeed();
